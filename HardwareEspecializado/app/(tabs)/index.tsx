@@ -1,18 +1,52 @@
-import { View, Text, StyleSheet, Button } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import MapView, { Marker, Region } from 'react-native-maps';
+import * as Location from 'expo-location';
 
-export default function HomeScreen() {
-  return (
-    <View style={styles.container}>
-     <Text>Map</Text>
-    </View>
-  );
+interface LocationCoords {
+  latitude: number;
+  longitude: number;
 }
 
-const styles = StyleSheet.create({
-  container: {
-    width: '100%',
-    height: '100%',
-    alignContent: 'center',
-    justifyContent: 'center',
-  },
-});
+interface LocationType {
+  coords: LocationCoords;
+}
+
+const MostrarMapa: React.FC = () => {
+  const [location, setLocation] = useState<LocationType | null>(null);
+
+  useEffect(() => {
+    (async () => {
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== 'granted') {
+        console.log('Permiso de localización negado');
+        return;
+      }
+
+      const location = await Location.getCurrentPositionAsync({});
+      setLocation(location);
+    })();
+  }, []);
+
+  const defaultRegion: Region = {
+    latitude: location?.coords.latitude || 37.78825,
+    longitude: location?.coords.longitude || -122.4324,
+    latitudeDelta: 0.0922,
+    longitudeDelta: 0.0421,
+  };
+
+  return (
+    <MapView style={{ flex: 1 }} region={defaultRegion}>
+      {location && (
+        <Marker
+          coordinate={{
+            latitude: location.coords.latitude,
+            longitude: location.coords.longitude,
+          }}
+          title="Mi ubicación"
+        />
+      )}
+    </MapView>
+  );
+};
+
+export default MostrarMapa;
