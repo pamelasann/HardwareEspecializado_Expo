@@ -13,9 +13,17 @@ interface MapaProps {
     showsTraffic: boolean;
 }
 
+interface Restaurant {
+  id: string;
+  name: string;
+  latitude: number;
+  longitude: number;
+}
+
 export default function Mapa() {
     const [location, setLocation] = useState<Location.LocationObject | null>(null);
     const [showTraffic, setShowTraffic] = useState(false);
+    const [restaurants, setRestaurants] = useState<Restaurant[]>([]);
 
     const router = useRouter();
     
@@ -29,8 +37,38 @@ export default function Mapa() {
 
             let location = await Location.getCurrentPositionAsync({});
             setLocation(location);
+            if (location) {
+              fetchRestaurants(location.coords.latitude, location.coords.longitude);
+          }
         })();
     }, []);
+
+    const fetchRestaurants = async (latitude: number, longitude: number) => {
+      const API_KEY = process.env.GOOGLE_PLACES_API_KEY;
+      const radius = 1000; 
+      const type = 'restaurant';
+
+      const url = `https://maps.googleapis.com/maps/api/place/nearbysearch/json?location=${latitude},${longitude}&radius=${radius}&type=${type}&key=${API_KEY}`;
+      
+      try {
+          const response = await fetch(url);
+          const data = await response.json();
+
+          if (data.results) {
+              const parsedRestaurants = data.results.map((place: any) => ({
+                  id: place.place_id,
+                  name: place.name,
+                  latitude: place.geometry.location.lat,
+                  longitude: place.geometry.location.lng,
+              }));
+              setRestaurants(parsedRestaurants);
+          } else {
+              console.log('No nearby places found.');
+          }
+      } catch (error) {
+          console.error('Error fetching restaurants:', error);
+      }
+  };
 
     return (
       <View style={styles.mainContainer}>
@@ -53,6 +91,17 @@ export default function Mapa() {
             title="Mi ubicación"
             />
         )}
+        {restaurants.map((restaurant) => (
+            <Marker
+                key={restaurant.id}
+                coordinate={{
+                    latitude: restaurant.latitude,
+                    longitude: restaurant.longitude,
+                }}
+                title={restaurant.name}
+                pinColor="red"
+            />
+        ))}
         </MapView>
 
         <View style={styles.homeBtnContainer}>
